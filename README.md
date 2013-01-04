@@ -5,7 +5,7 @@ MessagePack encoding package for Go
 ## Usage
 
 ### Pack/Unpack
-    packed := msgpack.Marshal([]interface{}{1, nil, "three"})
+    packed, _ := msgpack.Marshal([]interface{}{1, nil, "three"})
 
     var unpacked interface{}
     msgpack.Unmarshal(packed, &unpacked)
@@ -37,7 +37,7 @@ MessagePack encoding package for Go
     }
 
     var unpacked Person
-    packed := msgpack.Marshal(Person{"hinasssan", 16})
+    packed, _ := msgpack.Marshal(Person{"hinasssan", 16})
     msgpack.Unmarshal(packed, &unpacked)
     fmt.Println(unpacked.Name)
     

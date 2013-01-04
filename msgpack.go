@@ -48,9 +48,9 @@ func (enc *Encoder) WriteBinary(value interface{}) {
 	binary.Write(enc, binary.BigEndian, value)
 }
 
-func (enc *Encoder) Encode(value interface{}) {
+func (enc *Encoder) Encode(value interface{}) error {
 	enc.encode(reflect.ValueOf(value))
-	enc.Flush()
+	return enc.Flush()
 }
 
 func (enc *Encoder) encode(value reflect.Value) {
@@ -523,10 +523,16 @@ func (dec *Decoder) decodeStruct(ptr_value reflect.Value, map_len uint32) {
 	}
 }
 
-func Marshal(value interface{}) []byte {
+func Marshal(value interface{}) ([]byte, error) {
 	buffer := new(bytes.Buffer)
-	NewEncoder(buffer).Encode(value)
-	return buffer.Bytes()
+
+	err := NewEncoder(buffer).Encode(value)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), nil
 }
 
 func Unmarshal(data []byte, ptr interface{}) error {
