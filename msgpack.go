@@ -304,7 +304,11 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 		}
 	case TYPE_FLOAT32, TYPE_UINT32, TYPE_INT32:
 		var value uint32
-		dec.ReadBinary(&value)
+		err := dec.ReadBinary(&value)
+
+		if err != nil {
+			return err
+		}
 
 		switch typeid {
 		case TYPE_FLOAT32:
