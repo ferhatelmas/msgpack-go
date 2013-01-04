@@ -246,9 +246,9 @@ func (dec *Decoder) Decode(ptr interface{}) error {
 func (dec *Decoder) decode(ptr_value reflect.Value) error {
 	typeid, err := dec.ReadByte()
 
-  if err != nil {
-    return err
-  }
+	if err != nil {
+		return err
+	}
 
 	switch {
 	case typeid <= 0x7f:
@@ -276,7 +276,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 		value, err := dec.ReadByte()
 
 		if err != nil {
-		  return err
+			return err
 		}
 
 		dec.decodeUint(ptr_value, uint64(value))
@@ -284,7 +284,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 		value, err := dec.ReadByte()
 
 		if err != nil {
-		  return err
+			return err
 		}
 
 		dec.decodeInt(ptr_value, int64(int8(value)))
