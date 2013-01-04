@@ -255,11 +255,11 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 		typeid = TYPE_UINT8
 		dec.UnreadByte()
 	case typeid <= TYPE_FIXMAP+15:
-		dec.decodeMap(ptr_value, int(typeid-TYPE_FIXMAP))
+		dec.decodeMap(ptr_value, uint32(typeid-TYPE_FIXMAP))
 	case typeid <= TYPE_FIXARY+15:
-		dec.decodeArray(ptr_value, int(typeid-TYPE_FIXARY))
+		dec.decodeArray(ptr_value, uint32(typeid-TYPE_FIXARY))
 	case typeid <= TYPE_FIXRAW+31:
-		dec.decodeRaw(ptr_value, int(typeid-TYPE_FIXRAW))
+		dec.decodeRaw(ptr_value, uint32(typeid-TYPE_FIXRAW))
 	case typeid >= TYPE_FIXNEG:
 		typeid = TYPE_INT8
 		dec.UnreadByte()
@@ -340,11 +340,11 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 
 		switch typeid {
 		case TYPE_MAP16:
-			dec.decodeMap(ptr_value, int(length))
+			dec.decodeMap(ptr_value, uint32(length))
 		case TYPE_ARY16:
-			dec.decodeArray(ptr_value, int(length))
+			dec.decodeArray(ptr_value, uint32(length))
 		case TYPE_RAW16:
-			dec.decodeRaw(ptr_value, int(length))
+			dec.decodeRaw(ptr_value, uint32(length))
 		}
 	case TYPE_MAP32, TYPE_ARY32, TYPE_RAW32:
 		var length uint32
@@ -356,11 +356,11 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 
 		switch typeid {
 		case TYPE_MAP32:
-			dec.decodeMap(ptr_value, int(length))
+			dec.decodeMap(ptr_value, length)
 		case TYPE_ARY32:
-			dec.decodeArray(ptr_value, int(length))
+			dec.decodeArray(ptr_value, length)
 		case TYPE_RAW32:
-			dec.decodeRaw(ptr_value, int(length))
+			dec.decodeRaw(ptr_value, length)
 		}
 	}
 
@@ -427,7 +427,7 @@ func (dec *Decoder) decodeInt(ptr_value reflect.Value, value int64) {
 	}
 }
 
-func (dec *Decoder) decodeRaw(ptr_value reflect.Value, length int) {
+func (dec *Decoder) decodeRaw(ptr_value reflect.Value, length uint32) {
 	value := make([]byte, length)
 
 	dec.Read(value)
@@ -442,24 +442,24 @@ func (dec *Decoder) decodeRaw(ptr_value reflect.Value, length int) {
 	}
 }
 
-func (dec *Decoder) decodeArray(ptr_value reflect.Value, length int) {
+func (dec *Decoder) decodeArray(ptr_value reflect.Value, length uint32) {
 	var value reflect.Value
 
 	switch ptr_value.Kind() {
 	case reflect.Slice:
-		value = reflect.MakeSlice(ptr_value.Type(), length, length)
+		value = reflect.MakeSlice(ptr_value.Type(), int(length), int(length))
 	case reflect.Interface:
-		value = reflect.ValueOf(make([]interface{}, length))
+		value = reflect.ValueOf(make([]interface{}, int(length)))
 	}
 
-	for i := 0; i < length; i++ {
+	for i := 0; i < int(length); i++ {
 		dec.Decode(value.Index(i).Addr().Interface())
 	}
 
 	ptr_value.Set(value)
 }
 
-func (dec *Decoder) decodeMap(ptr_value reflect.Value, length int) {
+func (dec *Decoder) decodeMap(ptr_value reflect.Value, length uint32) {
 	var value reflect.Value
 
 	switch ptr_value.Kind() {
@@ -472,7 +472,7 @@ func (dec *Decoder) decodeMap(ptr_value reflect.Value, length int) {
 		value = reflect.ValueOf(make(map[interface{}]interface{}))
 	}
 
-	for i := 0; i < length; i++ {
+	for i := 0; i < int(length); i++ {
 		key_ptr := reflect.New(value.Type().Key())
 		value_ptr := reflect.New(value.Type().Elem())
 		dec.Decode(key_ptr.Interface())
@@ -483,7 +483,7 @@ func (dec *Decoder) decodeMap(ptr_value reflect.Value, length int) {
 	ptr_value.Set(value)
 }
 
-func (dec *Decoder) decodeStruct(ptr_value reflect.Value, map_len int) {
+func (dec *Decoder) decodeStruct(ptr_value reflect.Value, map_len uint32) {
 	typeinfo := ptr_value.Type()
 	fields_len := typeinfo.NumField()
 	fields := make(map[string]reflect.Value)
@@ -506,7 +506,7 @@ func (dec *Decoder) decodeStruct(ptr_value reflect.Value, map_len int) {
 		fields[key] = ptr_value.Field(i)
 	}
 
-	for i := 0; i < map_len; i++ {
+	for i := 0; i < int(map_len); i++ {
 		var key string
 		dec.Decode(&key)
 
