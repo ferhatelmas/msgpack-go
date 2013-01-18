@@ -1,7 +1,6 @@
 package msgpack
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"io"
@@ -37,20 +36,29 @@ const (
 )
 
 type Encoder struct {
-	*bufio.Writer
+	io.Writer
 }
 
 func NewEncoder(w io.Writer) *Encoder {
-	return &Encoder{bufio.NewWriter(w)}
+	return &Encoder{w}
+}
+
+func (enc *Encoder) Encode(value interface{}) (err error) {
+	defer func() { err, _ = recover().(error) }()
+	enc.encode(reflect.ValueOf(value))
+	return
+}
+
+func (enc *Encoder) WriteByte(c byte) {
+	if _, err := enc.Write([]byte{c}); err != nil {
+		panic(err)
+	}
 }
 
 func (enc *Encoder) WriteBinary(value interface{}) {
-	binary.Write(enc, binary.BigEndian, value)
-}
-
-func (enc *Encoder) Encode(value interface{}) error {
-	enc.encode(reflect.ValueOf(value))
-	return enc.Flush()
+	if err := binary.Write(enc, binary.BigEndian, value); err != nil {
+		panic(err)
+	}
 }
 
 func (enc *Encoder) encode(value reflect.Value) {
@@ -228,32 +236,42 @@ func (enc *Encoder) encodeStruct(value reflect.Value) {
 }
 
 type Decoder struct {
-	*bufio.Reader
+	io.Reader
 }
 
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{bufio.NewReader(r)}
+	return &Decoder{r}
 }
 
-func (dec *Decoder) ReadBinary(ptr interface{}) error {
-	return binary.Read(dec, binary.BigEndian, ptr)
+func (dec *Decoder) Decode(ptr interface{}) (err error) {
+	defer func() { err, _ = recover().(error) }()
+	dec.decode(reflect.ValueOf(ptr).Elem())
+	return
 }
 
-func (dec *Decoder) Decode(ptr interface{}) error {
-	return dec.decode(reflect.ValueOf(ptr).Elem())
-}
+func (dec *Decoder) ReadByte() byte {
+	var buf [1]byte
 
-func (dec *Decoder) decode(ptr_value reflect.Value) error {
-	typeid, err := dec.ReadByte()
-
-	if err != nil {
-		return err
+	if _, err := dec.Read(buf[:]); err != nil {
+		panic(err)
 	}
+
+	return buf[0]
+}
+
+func (dec *Decoder) ReadBinary(ptr interface{}) {
+	if err := binary.Read(dec, binary.BigEndian, ptr); err != nil {
+		panic(err)
+	}
+}
+
+func (dec *Decoder) decode(ptr_value reflect.Value) {
+	typeid := dec.ReadByte()
 
 	switch {
 	case typeid <= 0x7f:
 		typeid = TYPE_UINT8
-		dec.UnreadByte()
+		dec.decodeUint(ptr_value, uint64(typeid))
 	case typeid <= TYPE_FIXMAP+15:
 		dec.decodeMap(ptr_value, uint32(typeid-TYPE_FIXMAP))
 	case typeid <= TYPE_FIXARY+15:
@@ -261,8 +279,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 	case typeid <= TYPE_FIXRAW+31:
 		dec.decodeRaw(ptr_value, uint32(typeid-TYPE_FIXRAW))
 	case typeid >= TYPE_FIXNEG:
-		typeid = TYPE_INT8
-		dec.UnreadByte()
+		dec.decodeInt(ptr_value, int64(int8(typeid)))
 	}
 
 	switch typeid {
@@ -273,28 +290,12 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 	case TYPE_TRUE:
 		dec.decodeBool(ptr_value, true)
 	case TYPE_UINT8:
-		value, err := dec.ReadByte()
-
-		if err != nil {
-			return err
-		}
-
-		dec.decodeUint(ptr_value, uint64(value))
+		dec.decodeUint(ptr_value, uint64(dec.ReadByte()))
 	case TYPE_INT8:
-		value, err := dec.ReadByte()
-
-		if err != nil {
-			return err
-		}
-
-		dec.decodeInt(ptr_value, int64(int8(value)))
+		dec.decodeInt(ptr_value, int64(int8(dec.ReadByte())))
 	case TYPE_UINT16, TYPE_INT16:
 		var value uint16
-		err := dec.ReadBinary(&value)
-
-		if err != nil {
-			return err
-		}
+		dec.ReadBinary(&value)
 
 		switch typeid {
 		case TYPE_UINT16:
@@ -304,11 +305,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 		}
 	case TYPE_FLOAT32, TYPE_UINT32, TYPE_INT32:
 		var value uint32
-		err := dec.ReadBinary(&value)
-
-		if err != nil {
-			return err
-		}
+		dec.ReadBinary(&value)
 
 		switch typeid {
 		case TYPE_FLOAT32:
@@ -320,11 +317,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 		}
 	case TYPE_FLOAT64, TYPE_UINT64, TYPE_INT64:
 		var value uint64
-		err := dec.ReadBinary(&value)
-
-		if err != nil {
-			return err
-		}
+		dec.ReadBinary(&value)
 
 		switch typeid {
 		case TYPE_FLOAT64:
@@ -336,11 +329,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 		}
 	case TYPE_MAP16, TYPE_ARY16, TYPE_RAW16:
 		var length uint16
-		err := dec.ReadBinary(&length)
-
-		if err != nil {
-			return err
-		}
+		dec.ReadBinary(&length)
 
 		switch typeid {
 		case TYPE_MAP16:
@@ -352,11 +341,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 		}
 	case TYPE_MAP32, TYPE_ARY32, TYPE_RAW32:
 		var length uint32
-		err := dec.ReadBinary(&length)
-
-		if err != nil {
-			return err
-		}
+		dec.ReadBinary(&length)
 
 		switch typeid {
 		case TYPE_MAP32:
@@ -367,8 +352,6 @@ func (dec *Decoder) decode(ptr_value reflect.Value) error {
 			dec.decodeRaw(ptr_value, length)
 		}
 	}
-
-	return nil
 }
 
 func (dec *Decoder) decodeNil(ptr_value reflect.Value) {
