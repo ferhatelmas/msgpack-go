@@ -6,7 +6,6 @@ import (
 	"io"
 	"reflect"
 	"strconv"
-	"unsafe"
 )
 
 const (
@@ -107,7 +106,7 @@ func (enc *Encoder) encodeBool(value bool) {
 
 func (enc *Encoder) encodeFloat(value float64) {
 	enc.WriteByte(TYPE_FLOAT64)
-	enc.WriteBinary(*(*uint64)(unsafe.Pointer(&value)))
+	enc.WriteBinary(value)
 }
 
 func (enc *Encoder) encodeUint(value uint64) {
@@ -303,25 +302,29 @@ func (dec *Decoder) decode(ptr_value reflect.Value) {
 		case TYPE_INT16:
 			dec.decodeInt(ptr_value, int64(int16(value)))
 		}
-	case TYPE_FLOAT32, TYPE_UINT32, TYPE_INT32:
+	case TYPE_FLOAT32:
+		var value float32
+		dec.ReadBinary(&value)
+		dec.decodeFloat(ptr_value, float64(value))
+	case TYPE_FLOAT64:
+		var value float64
+		dec.ReadBinary(&value)
+		dec.decodeFloat(ptr_value, value)
+	case TYPE_UINT32, TYPE_INT32:
 		var value uint32
 		dec.ReadBinary(&value)
 
 		switch typeid {
-		case TYPE_FLOAT32:
-			dec.decodeFloat(ptr_value, float64(*(*uint32)(unsafe.Pointer(&value))))
 		case TYPE_UINT32:
 			dec.decodeUint(ptr_value, uint64(value))
 		case TYPE_INT32:
 			dec.decodeInt(ptr_value, int64(int32(value)))
 		}
-	case TYPE_FLOAT64, TYPE_UINT64, TYPE_INT64:
+	case TYPE_UINT64, TYPE_INT64:
 		var value uint64
 		dec.ReadBinary(&value)
 
 		switch typeid {
-		case TYPE_FLOAT64:
-			dec.decodeFloat(ptr_value, *(*float64)(unsafe.Pointer(&value)))
 		case TYPE_UINT64:
 			dec.decodeUint(ptr_value, value)
 		case TYPE_INT64:
