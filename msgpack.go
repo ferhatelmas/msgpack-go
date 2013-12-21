@@ -48,13 +48,13 @@ func (enc *Encoder) Encode(value interface{}) (err error) {
 	return
 }
 
-func (enc *Encoder) WriteByte(c byte) {
+func (enc *Encoder) writeByte(c byte) {
 	if _, err := enc.Write([]byte{c}); err != nil {
 		panic(err)
 	}
 }
 
-func (enc *Encoder) WriteBinary(value interface{}) {
+func (enc *Encoder) writeBinary(value interface{}) {
 	if err := binary.Write(enc, binary.BigEndian, value); err != nil {
 		panic(err)
 	}
@@ -93,57 +93,57 @@ func (enc *Encoder) encode(value reflect.Value) {
 }
 
 func (enc *Encoder) encodeNil() {
-	enc.WriteByte(TYPE_NIL)
+	enc.writeByte(TYPE_NIL)
 }
 
 func (enc *Encoder) encodeBool(value bool) {
 	if value {
-		enc.WriteByte(TYPE_TRUE)
+		enc.writeByte(TYPE_TRUE)
 	} else {
-		enc.WriteByte(TYPE_FALSE)
+		enc.writeByte(TYPE_FALSE)
 	}
 }
 
 func (enc *Encoder) encodeFloat(value float64) {
-	enc.WriteByte(TYPE_FLOAT64)
-	enc.WriteBinary(value)
+	enc.writeByte(TYPE_FLOAT64)
+	enc.writeBinary(value)
 }
 
 func (enc *Encoder) encodeUint(value uint64) {
 	switch {
 	case value <= 127:
-		enc.WriteByte(byte(value))
+		enc.writeByte(byte(value))
 	case value <= 255:
-		enc.WriteByte(TYPE_UINT8)
-		enc.WriteByte(byte(value))
+		enc.writeByte(TYPE_UINT8)
+		enc.writeByte(byte(value))
 	case value <= 65535:
-		enc.WriteByte(TYPE_UINT16)
-		enc.WriteBinary(uint16(value))
+		enc.writeByte(TYPE_UINT16)
+		enc.writeBinary(uint16(value))
 	case value <= 4294967295:
-		enc.WriteByte(TYPE_UINT32)
-		enc.WriteBinary(uint32(value))
+		enc.writeByte(TYPE_UINT32)
+		enc.writeBinary(uint32(value))
 	default:
-		enc.WriteByte(TYPE_UINT64)
-		enc.WriteBinary(value)
+		enc.writeByte(TYPE_UINT64)
+		enc.writeBinary(value)
 	}
 }
 
 func (enc *Encoder) encodeInt(value int64) {
 	switch {
 	case -32 <= value && value <= -1:
-		enc.WriteByte(TYPE_FIXNEG | byte(32+value))
+		enc.writeByte(TYPE_FIXNEG | byte(32+value))
 	case -128 <= value && value <= 127:
-		enc.WriteByte(TYPE_INT8)
-		enc.WriteByte(byte(value))
+		enc.writeByte(TYPE_INT8)
+		enc.writeByte(byte(value))
 	case -32768 <= value && value <= 32767:
-		enc.WriteByte(TYPE_INT16)
-		enc.WriteBinary(int16(value))
+		enc.writeByte(TYPE_INT16)
+		enc.writeBinary(int16(value))
 	case -2147483648 <= value && value <= 2147483647:
-		enc.WriteByte(TYPE_INT32)
-		enc.WriteBinary(int32(value))
+		enc.writeByte(TYPE_INT32)
+		enc.writeBinary(int32(value))
 	default:
-		enc.WriteByte(TYPE_INT64)
-		enc.WriteBinary(value)
+		enc.writeByte(TYPE_INT64)
+		enc.writeBinary(value)
 	}
 }
 
@@ -152,13 +152,13 @@ func (enc *Encoder) encodeRaw(value []byte) {
 
 	switch {
 	case length <= 31:
-		enc.WriteByte(TYPE_FIXRAW | uint8(length))
+		enc.writeByte(TYPE_FIXRAW | uint8(length))
 	case length <= 65535:
-		enc.WriteByte(TYPE_RAW16)
-		enc.WriteBinary(uint16(length))
+		enc.writeByte(TYPE_RAW16)
+		enc.writeBinary(uint16(length))
 	default:
-		enc.WriteByte(TYPE_RAW32)
-		enc.WriteBinary(uint32(length))
+		enc.writeByte(TYPE_RAW32)
+		enc.writeBinary(uint32(length))
 	}
 
 	enc.Write(value)
@@ -174,13 +174,13 @@ func (enc *Encoder) encodeArray(value reflect.Value) {
 
 	switch {
 	case length <= 15:
-		enc.WriteByte(TYPE_FIXARY | uint8(length))
+		enc.writeByte(TYPE_FIXARY | uint8(length))
 	case length <= 65535:
-		enc.WriteByte(TYPE_ARY16)
-		enc.WriteBinary(uint16(length))
+		enc.writeByte(TYPE_ARY16)
+		enc.writeBinary(uint16(length))
 	default:
-		enc.WriteByte(TYPE_ARY32)
-		enc.WriteBinary(uint32(length))
+		enc.writeByte(TYPE_ARY32)
+		enc.writeBinary(uint32(length))
 	}
 
 	for i := 0; i < length; i++ {
@@ -193,13 +193,13 @@ func (enc *Encoder) encodeMap(value reflect.Value) {
 
 	switch {
 	case length <= 15:
-		enc.WriteByte(TYPE_FIXMAP | uint8(length))
+		enc.writeByte(TYPE_FIXMAP | uint8(length))
 	case length <= 65535:
-		enc.WriteByte(TYPE_MAP16)
-		enc.WriteBinary(uint16(length))
+		enc.writeByte(TYPE_MAP16)
+		enc.writeBinary(uint16(length))
 	default:
-		enc.WriteByte(TYPE_MAP32)
-		enc.WriteBinary(uint32(length))
+		enc.writeByte(TYPE_MAP32)
+		enc.writeBinary(uint32(length))
 	}
 
 	for _, key := range value.MapKeys() {
@@ -248,7 +248,7 @@ func (dec *Decoder) Decode(ptr interface{}) (err error) {
 	return
 }
 
-func (dec *Decoder) ReadByte() byte {
+func (dec *Decoder) readByte() byte {
 	var buf [1]byte
 
 	if _, err := dec.Read(buf[:]); err != nil {
@@ -258,14 +258,14 @@ func (dec *Decoder) ReadByte() byte {
 	return buf[0]
 }
 
-func (dec *Decoder) ReadBinary(ptr interface{}) {
+func (dec *Decoder) readBinary(ptr interface{}) {
 	if err := binary.Read(dec, binary.BigEndian, ptr); err != nil {
 		panic(err)
 	}
 }
 
 func (dec *Decoder) decode(ptr_value reflect.Value) {
-	typeid := dec.ReadByte()
+	typeid := dec.readByte()
 
 	switch {
 	case typeid <= 0x7f:
@@ -289,12 +289,12 @@ func (dec *Decoder) decode(ptr_value reflect.Value) {
 	case TYPE_TRUE:
 		dec.decodeBool(ptr_value, true)
 	case TYPE_UINT8:
-		dec.decodeUint(ptr_value, uint64(dec.ReadByte()))
+		dec.decodeUint(ptr_value, uint64(dec.readByte()))
 	case TYPE_INT8:
-		dec.decodeInt(ptr_value, int64(int8(dec.ReadByte())))
+		dec.decodeInt(ptr_value, int64(int8(dec.readByte())))
 	case TYPE_UINT16, TYPE_INT16:
 		var value uint16
-		dec.ReadBinary(&value)
+		dec.readBinary(&value)
 
 		switch typeid {
 		case TYPE_UINT16:
@@ -304,15 +304,15 @@ func (dec *Decoder) decode(ptr_value reflect.Value) {
 		}
 	case TYPE_FLOAT32:
 		var value float32
-		dec.ReadBinary(&value)
+		dec.readBinary(&value)
 		dec.decodeFloat(ptr_value, float64(value))
 	case TYPE_FLOAT64:
 		var value float64
-		dec.ReadBinary(&value)
+		dec.readBinary(&value)
 		dec.decodeFloat(ptr_value, value)
 	case TYPE_UINT32, TYPE_INT32:
 		var value uint32
-		dec.ReadBinary(&value)
+		dec.readBinary(&value)
 
 		switch typeid {
 		case TYPE_UINT32:
@@ -322,7 +322,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) {
 		}
 	case TYPE_UINT64, TYPE_INT64:
 		var value uint64
-		dec.ReadBinary(&value)
+		dec.readBinary(&value)
 
 		switch typeid {
 		case TYPE_UINT64:
@@ -332,7 +332,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) {
 		}
 	case TYPE_MAP16, TYPE_ARY16, TYPE_RAW16:
 		var length uint16
-		dec.ReadBinary(&length)
+		dec.readBinary(&length)
 
 		switch typeid {
 		case TYPE_MAP16:
@@ -344,7 +344,7 @@ func (dec *Decoder) decode(ptr_value reflect.Value) {
 		}
 	case TYPE_MAP32, TYPE_ARY32, TYPE_RAW32:
 		var length uint32
-		dec.ReadBinary(&length)
+		dec.readBinary(&length)
 
 		switch typeid {
 		case TYPE_MAP32:
